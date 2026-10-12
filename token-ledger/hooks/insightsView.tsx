@@ -74,7 +74,7 @@ export const insightsPane = (
       {s.status === 'empty' && <Text>Haiku returned no usable questions. Try again.</Text>}
       {s.status === 'error' && <Text color="error">Couldn't generate questions: {s.error}</Text>}
       {s.status === 'ready' && (
-        <Text dimColor>Tick any number (click or 1-{s.items.length}), then insert them together.</Text>
+        <Text dimColor>Tick any number (click or {s.items.length === 1 ? 'press 1' : `1-${s.items.length}`}), then insert them together.</Text>
       )}
       {s.status === 'ready' &&
         s.items.map((item, i) => (

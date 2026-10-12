@@ -8,6 +8,14 @@ Three function-hook mods for Claude Code:
 
 Every picture below was rendered from the element trees these mods really return, recorded with the Claude Code plugin test kit. They show what you get, not a mock-up. **[Try the interactive demo →](https://bully911210.github.io/claude-code-mods/)**
 
+**Real recording** (Claude Code 2.1.295 desktop app, Windows 11): click `?`, Haiku writes five questions about this conversation, tick three, and insert them into the prompt box together.
+
+<p align="center">
+  <img src="docs/img/demo-real.gif" alt="Screen recording: clicking ? on the token-ledger row, five Haiku questions appear in a pane, three are ticked and inserted into the prompt box" width="100%">
+</p>
+
+**Rendered from the mod's own draw output:**
+
 <p align="center">
   <img src="docs/img/demo-questions.svg" alt="Animated demo: click ?, tick two of Haiku's questions, and insert them into the prompt box" width="100%">
 </p>

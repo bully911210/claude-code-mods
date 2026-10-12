@@ -165,3 +165,13 @@ test('select all ticks every step and clear unticks them', async ($, on) => {
   expect(seen.filled).toEqual(['Run the retry tests\n\nCommit the fix\n\nPush the branch'])
   await pane.unmount()
 })
+
+test('with one step the hint says press 1, not 1-1', async ($, on) => {
+  const { clock } = world(on, '["Run the retry tests"]', true)
+  await $.turn.complete(longTurn)
+  await clock.settle()
+  const pane = await $.ui.mount({ plugin: 'next-steps', surface: 'terminal', component: 'Pane', requestId: 'next-steps', props: { bodyColumns: 100 } as never })
+  expect(await pane.find({ type: 'Text', text: /click or press 1\)/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /1-1/ })).toBeUndefined()
+  await pane.unmount()
+})

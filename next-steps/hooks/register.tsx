@@ -97,7 +97,7 @@ function stepsTree($: EngineInterface, els: Table, steps: readonly string[], pic
   const isAllPicked = count === steps.length
   return (
     <Box key="steps" flexDirection="column">
-      <Text dimColor>Tick any number (click or 1-{steps.length}), then insert them together.</Text>
+      <Text dimColor>Tick any number (click or {steps.length === 1 ? 'press 1' : `1-${steps.length}`}), then insert them together.</Text>
       {steps.map((step, i) => {
         const isPicked = picked.includes(i)
         return (
