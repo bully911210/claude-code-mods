@@ -1,0 +1,5 @@
+# Engine-generated type stubs (claude plugin validate/test write these)
+**/.claude-plugin/types/
+node_modules/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code Mods Demo</title>
+<meta name="description" content="Click through the token-ledger and next-steps mods, drawn from the element trees the mods really return.">
+<style>
+  :root {
+    --bg: #1f1e1d; --window: #262624; --panel: #2b2a28; --border: #3d3c39; --text: #ece9e4; --dim: #8d8a85;
+    --chip: #3a3936; --warning: #e08a4f; --suggestion: #8aa4ff; --merged: #b78cff; --success: #6cc287;
+    --error: #ef6b6b; --subtle: #8d8a85; --inactive: #6f6d69; --accent: #d97757; --composer: #30302e; --page: #141413;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 14px/1.5 Inter, "Segoe UI", system-ui, -apple-system, sans-serif; }
+  header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 32px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  header p { color: var(--dim); margin: 0 0 20px; max-width: 760px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs button { background: none; border: 1px solid var(--border); color: var(--dim); border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-color: var(--accent); }
+  .app { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; min-height: 560px; }
+  .app:has(.pane[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .chat { display: flex; flex-direction: column; min-width: 0; }
+  .msgs { flex: 1; }
+  .bubble { margin-left: auto; width: fit-content; max-width: 80%; background: #3a3936; border-radius: 10px; padding: 7px 14px; margin-bottom: 16px; }
+  .answer { max-width: 620px; }
+  .band { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 6px; min-height: 30px; white-space: pre; overflow: hidden; }
+  .row { display: flex; align-items: center; flex-wrap: nowrap; overflow: hidden; }
+  .composer { background: var(--composer); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; min-height: 46px; white-space: pre-wrap; }
+  .composer.empty { color: var(--inactive); }
+  .pane { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; min-width: 0; }
+  .pane[hidden] { display: none; }
+  .pane-title { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .pane-title button { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 16px; }
+  .pane-body { padding: 14px 18px; overflow: auto; }
+  .col { display: flex; flex-direction: column; }
+  .flexrow { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .t-dim { color: var(--dim); }
+  .t-bold { font-weight: 600; }
+  .btn { font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-align: left; }
+  .btn.plain { background: none; border: 0; padding: 2px 0; color: var(--text); }
+  .btn.native { background: none; border: 1px solid #6a6864; color: var(--text); border-radius: 6px; padding: 2px 10px; }
+  .btn.native.dim { border-color: var(--border); color: var(--dim); }
+  .btn.primary { background: var(--accent); border: 0; color: #1f1e1d; border-radius: 6px; padding: 3px 12px; font-weight: 600; }
+  .btn.primary.dim { background: #4a3a33; color: #b59c90; font-weight: 400; }
+  .btn.dim { color: var(--dim); }
+  .btn:hover, .btn:focus-visible { color: var(--text); outline: none; }
+  .btn.plain:focus-visible { text-decoration: underline; }
+  .chip { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 3px; background: var(--chip); color: var(--dim); font-size: 11px; }
+  .key { color: var(--inactive); font-size: 11px; }
+  .note { color: var(--dim); font-size: 12px; margin: 10px 0 30px; }
+  footer { color: var(--dim); font-size: 12px; padding-bottom: 40px; }
+  a { color: var(--suggestion); }
+  @media (max-width: 860px) { .app { grid-template-columns: 1fr; } .band { white-space: normal; } }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --page: #f4f2ee; } :root:not([data-theme="dark"]) body { color: #1f1e1d; } :root:not([data-theme="dark"]) header p, :root:not([data-theme="dark"]) .note, :root:not([data-theme="dark"]) footer { color: #5d5a55; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Claude Code mods: try them</h1>
+  <p>Everything inside the window below is drawn from the element trees the mods really return (recorded with the plugin test kit). Click <b>?</b> on the telemetry row, tick as many questions or steps as you like, then insert them.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="questions">token-ledger: ? questions</button>
+    <button role="tab" aria-selected="false" data-tab="steps">next-steps</button>
+    <button role="tab" aria-selected="false" data-tab="ledger">token-ledger: /ledger</button>
+  </div>
+</header>
+<main>
+  <div class="app">
+    <section class="chat">
+      <div class="msgs">
+        <div class="bubble">Add retries with backoff to the job worker</div>
+        <div class="answer">Done. <code>src/worker.ts</code> now retries failed jobs with exponential backoff, capped by <code>RETRY_MAX</code> from the config. Tests pass.</div>
+      </div>
+      <div class="band" id="band"></div>
+      <div class="composer empty" id="composer">Reply to Claude…</div>
+    </section>
+    <aside class="pane" id="pane" hidden>
+      <div class="pane-title"><span id="pane-title"></span><button type="button" id="pane-close" aria-label="Close pane">✕</button></div>
+      <div class="pane-body" id="pane-body"></div>
+    </aside>
+  </div>
+  <p class="note">Keyboard works too: focus the pane and press 1-5 to tick, <b>a</b> select all, <b>c</b> clear, <b>i</b> insert. The real mods ask Haiku for these; this page replays the recorded answers.</p>
+</main>
+<footer>MIT licensed · <a href="https://github.com/bully911210/claude-code-mods">github.com/bully911210/claude-code-mods</a></footer>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const COLORS = ["warning", "suggestion", "merged", "success", "error", "subtle", "inactive", "text"];
+
+  // ---- render an engine element tree into DOM, wiring presses by key ----
+  function textOf(n) {
+    if (n == null) return "";
+    if (typeof n === "string") return n;
+    return (n.children || []).map(textOf).join("");
+  }
+  function styleText(el, p) {
+    if (p.dimColor) el.classList.add("t-dim");
+    else if (p.color && COLORS.includes(p.color)) el.style.color = `var(--${p.color})`;
+    if (p.bold) el.classList.add("t-bold");
+  }
+  function render(node, onPress) {
+    if (typeof node === "string") return document.createTextNode(node);
+    const p = node.props || {};
+    if (p.display === "none" || p.position === "absolute") return document.createTextNode("");
+    if (node.type === "Text") {
+      const el = document.createElement("span");
+      styleText(el, p);
+      for (const c of node.children || []) el.appendChild(render(c, onPress));
+      if (p.wrap === "wrap") el.style.whiteSpace = "normal";
+      return el;
+    }
+    if (node.type === "Button") {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn";
+      const label = p.label ?? textOf(node);
+      if (p.plain) {
+        b.classList.add("plain");
+        if (p.hotkey) { const c = document.createElement("span"); c.className = "chip"; c.textContent = p.hotkey; b.appendChild(c); }
+        const s = document.createElement("span"); s.textContent = label;
+        if (label.startsWith("[x]")) s.classList.add("t-bold");
+        b.appendChild(s);
+      } else if (p.variant === "primary") {
+        b.classList.add("primary"); b.textContent = label;
+      } else {
+        b.classList.add("native");
+        if (p.hotkey) { const k = document.createElement("span"); k.className = "key"; k.textContent = p.hotkey; b.appendChild(k); }
+        b.appendChild(document.createTextNode(label));
+      }
+      if (p.dimColor) b.classList.add("dim");
+      b.addEventListener("click", () => onPress(p.key));
+      return b;
+    }
+    const el = document.createElement("div");
+    el.className = p.flexDirection === "row" ? "flexrow" : "col";
+    if (p.gap) el.style.gap = `${p.gap * 8}px`;
+    if (p.marginTop) el.style.marginTop = `${p.marginTop * 18}px`;
+    if (p.marginBottom) el.style.marginBottom = `${p.marginBottom * 18}px`;
+    if (p.marginLeft) el.style.marginLeft = `${p.marginLeft * 8}px`;
+    if (p.justifyContent === "space-between") { el.style.justifyContent = "space-between"; el.style.width = "100%"; el.style.flexWrap = "nowrap"; }
+    if (p.flexWrap === "nowrap") { el.style.flexWrap = "nowrap"; el.style.whiteSpace = "pre"; }
+    for (const c of node.children || []) el.appendChild(render(c, onPress));
+    return el;
+  }
+
+  // ---- the views, ported 1:1 from hooks/insightsView.tsx and next-steps/hooks/register.tsx ----
+  const insertLabelQ = n => n === 0 ? "Tick questions to insert" : n === 1 ? "Insert 1 question" : `Insert ${n} questions`;
+  const insertLabelS = n => n === 0 ? "Tick steps to insert" : n === 1 ? "Insert 1 step" : `Insert ${n} steps`;
+
+  function questionsTree(items, picked, status) {
+    const B = (key, props) => ({ type: "Button", props: { key, ...props } });
+    const kids = [];
+    if (status === "loading") kids.push({ type: "Text", props: { dimColor: true }, children: ["Haiku is reading the conversation and project…"] });
+    if (status === "ready") {
+      kids.push({ type: "Text", props: { dimColor: true }, children: [`Tick any number (click or 1-${items.length}), then insert them together.`] });
+      items.forEach((it, i) => {
+        const on = picked.includes(i);
+        kids.push({ type: "Box", props: { flexDirection: "column", marginBottom: i < items.length - 1 ? 1 : 0 }, children: [
+          B(`q-${i}`, { hotkey: String(i + 1), dimColor: !on, label: `${on ? "[x]" : "[ ]"} ${it.title}` }),
+          { type: "Text", props: { dimColor: true, wrap: "wrap" }, children: [it.question] },
+        ] });
+      });
+    }
+    const n = picked.length, all = items.length > 0 && n === items.length;
+    const actions = [];
+    if (status === "ready") {
+      actions.push(B("insert", { hotkey: "i", variant: "primary", dimColor: n === 0, label: insertLabelQ(n) }));
+      actions.push(all ? B("clear", { hotkey: "c", dimColor: true, label: "Clear" }) : B("all", { hotkey: "a", dimColor: true, label: "Select all" }));
+      actions.push(B("retry", { plain: true, dimColor: true, label: "Regenerate" }));
+    }
+    actions.push(B("close", { plain: true, dimColor: true, label: "Close" }));
+    kids.push({ type: "Box", props: { flexDirection: "row", marginTop: 1, gap: 2 }, children: actions });
+    return { type: "Box", props: { flexDirection: "column" }, children: kids };
+  }
+
+  function stepsTree(steps, picked) {
+    const B = (key, props) => ({ type: "Button", props: { key, ...props } });
+    const n = picked.length, all = n === steps.length;
+    return { type: "Box", props: { flexDirection: "column" }, children: [
+      { type: "Text", props: { dimColor: true }, children: [`Tick any number (click or 1-${steps.length}), then insert them together.`] },
+      ...steps.map((s, i) => ({ type: "Box", props: { flexDirection: "column", marginTop: 1 }, children: [
+        B(`step-${i}`, { hotkey: String(i + 1), plain: true, dimColor: !picked.includes(i), label: `${picked.includes(i) ? "[x]" : "[ ]"} ${s}` }),
+      ] })),
+      { type: "Box", props: { flexDirection: "row", gap: 2, marginTop: 1 }, children: [
+        B("insert", { hotkey: "i", variant: "primary", dimColor: n === 0, label: insertLabelS(n) }),
+        all ? B("clear", { hotkey: "c", dimColor: true, label: "Clear" }) : B("all", { hotkey: "a", dimColor: true, label: "Select all" }),
+        B("dismiss", { plain: true, dimColor: true, label: "Dismiss" }),
+      ] },
+    ] };
+  }
+
+  // ---- data recorded from the real mods ----
+  async function load(name) {
+    const text = await (await fetch(`capture/${name}.jsonl`)).text();
+    const out = {};
+    for (const line of text.split("\n").filter(Boolean)) { const r = JSON.parse(line); out[r.name] = r; }
+    return out;
+  }
+  function itemsFrom(tree) {
+    const rows = tree.children.filter(c => c.type === "Box" && (c.props.key || "").startsWith("row-"));
+    return rows.map(r => ({ title: r.children[0].props.label.slice(4), question: textOf(r.children[1]) }));
+  }
+  function stepsFrom(tree) {
+    return tree.children.filter(c => c.type === "Box" && (c.props.key || "").startsWith("row-")).map(r => r.children[0].props.label.slice(4));
+  }
+
+  const state = { tab: "questions", status: "idle", picked: [], box: "" };
+  let TL, NS, ITEMS, STEPS, BAND, BUSY_BAND;
+
+  function setBox(text) {
+    const c = $("composer");
+    c.textContent = text || "Reply to Claude…";
+    c.classList.toggle("empty", !text);
+  }
+  function insert(lines) {
+    const joined = lines.filter(s => s.trim()).join("\n\n");
+    if (!joined) return false;
+    state.box = state.box.trim() === "" ? joined : `${state.box}${state.box.endsWith("\n") ? "" : "\n\n"}${joined}`;
+    setBox(state.box);
+    return true;
+  }
+  function toggle(i) { state.picked = state.picked.includes(i) ? state.picked.filter(x => x !== i) : [...state.picked, i]; }
+  function pickAll(len) { state.picked = [...state.picked, ...[...Array(len).keys()].filter(i => !state.picked.includes(i))]; }
+  function closePane() { state.status = "idle"; state.picked = []; draw(); }
+
+  function onPress(key) {
+    if (key === "ask") {
+      if (state.status === "loading") return;
+      state.status = "loading"; state.picked = []; draw();
+      setTimeout(() => { state.status = "ready"; draw(); }, 900);
+      return;
+    }
+    const len = state.tab === "steps" ? STEPS.length : ITEMS.length;
+    if (/^(q|step)-\d$/.test(key)) toggle(Number(key.split("-")[1]));
+    else if (key === "all") pickAll(len);
+    else if (key === "clear") state.picked = [];
+    else if (key === "insert") {
+      const src = state.tab === "steps" ? STEPS : ITEMS.map(x => x.question);
+      if (insert(state.picked.map(i => src[i]))) return closePane();
+    } else if (key === "retry") { state.status = "idle"; return onPress("ask"); }
+    else if (key === "close" || key === "dismiss") return closePane();
+    draw();
+  }
+
+  function draw() {
+    const band = $("band");
+    band.replaceChildren(render(state.status === "loading" ? BUSY_BAND : BAND, onPress));
+    const pane = $("pane");
+    if (state.tab === "ledger") {
+      pane.hidden = false;
+      $("pane-title").textContent = "Token ledger";
+      $("pane-body").replaceChildren(render(TL.ledger.tree, () => {}));
+      return;
+    }
+    const open = state.tab === "steps" ? state.status !== "idle" : state.status !== "idle";
+    pane.hidden = !open;
+    if (!open) return;
+    $("pane-title").textContent = state.tab === "steps" ? "Next steps" : "Questions worth asking";
+    const tree = state.tab === "steps" ? stepsTree(STEPS, state.picked) : questionsTree(ITEMS, state.picked, state.status);
+    $("pane-body").replaceChildren(render(tree, onPress));
+  }
+
+  function selectTab(tab) {
+    state.tab = tab; state.picked = []; state.box = ""; setBox("");
+    state.status = tab === "steps" ? "ready" : "idle";
+    for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    draw();
+  }
+
+  document.addEventListener("keydown", e => {
+    if ($("pane").hidden || e.target.closest("input, textarea")) return;
+    const k = e.key.toLowerCase();
+    if (/^[1-5]$/.test(k)) onPress(`${state.tab === "steps" ? "step" : "q"}-${Number(k) - 1}`);
+    else if (k === "a" || k === "c" || k === "i") onPress(k === "a" ? "all" : k === "c" ? "clear" : "insert");
+  });
+  for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => selectTab(b.dataset.tab));
+  $("pane-close").addEventListener("click", closePane);
+
+  Promise.all([load("token-ledger"), load("next-steps")]).then(([tl, ns]) => {
+    TL = tl; NS = ns;
+    ITEMS = itemsFrom(tl["pane-0"].tree);
+    STEPS = stepsFrom(ns["steps-0"].tree);
+    BAND = tl.band.tree;
+    BUSY_BAND = JSON.parse(JSON.stringify(BAND).replace('"label":"?","plain":true,"dimColor":false', '"label":"…","plain":true,"dimColor":true'));
+    selectTab("questions");
+  }).catch(err => { $("band").textContent = `Could not load the recorded drawings: ${err.message}`; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "name": "auto-docs",
+  "version": "0.1.0",
+  "description": "After each commit this session makes, reads the diff and updates README.md (or the docs you list) with small, safe edits in a follow-up docs commit.",
+  "author": {
+    "name": "claude-code-mods contributors",
+    "url": "https://github.com/bully911210/claude-code-mods"
+  },
+  "userConfig": {
+    "docs": {
+      "type": "string",
+      "title": "Documentation files",
+      "description": "Comma-separated paths from the repository root, such as README.md, docs/setup.md.",
+      "default": "README.md"
+    },
+    "mode": {
+      "type": "string",
+      "title": "After updating",
+      "description": "commit: a separate docs commit. stage: leave the changes staged for you to review.",
+      "default": "commit",
+      "options": [
+        "commit",
+        "stage"
+      ]
+    },
+    "model": {
+      "type": "string",
+      "title": "Model",
+      "description": "The model that reads the diff and writes the edits.",
+      "default": "sonnet",
+      "options": [
+        "sonnet",
+        "opus",
+        "haiku"
+      ]
+    },
+    "maxDiffChars": {
+      "type": "number",
+      "title": "Diff budget (characters)",
+      "description": "Larger diffs are cut by whole files.",
+      "default": 60000
+    }
+  },
+  "license": "MIT",
+  "repository": "https://github.com/bully911210/claude-code-mods"
+}
