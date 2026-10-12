@@ -46,7 +46,7 @@ export const isSaId = (digits: string): boolean => {
 /** FNV-1a over salt + value, spelled in the letters a-p: stable per session, no digits. */
 export const tokenFor = (kind: Kind, value: string, salt: string): string => {
   let hash = 0x811c9dc5
-  const input = `${salt}\u0000${kind}\u0000${value}`
+  const input = `${salt}\u241f${kind}\u241f${value}`
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i)
     hash = Math.imul(hash, 0x01000193) >>> 0
