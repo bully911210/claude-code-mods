@@ -1,5 +1,8 @@
 # Claude Code mods
 
+[![ci](https://github.com/bully911210/claude-code-mods/actions/workflows/ci.yml/badge.svg)](https://github.com/bully911210/claude-code-mods/actions/workflows/ci.yml)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
 Three function-hook mods for Claude Code:
 
 - **token-ledger** puts your plan limits in one row above the prompt and adds a `?` button that asks Haiku what you should ask next.
@@ -165,6 +168,12 @@ Each mod has its own `tests/`. To redraw the README pictures after changing a vi
 3. Run `python docs/tools/render.py`.
 
 The interactive demo (`docs/index.html`) reads the same JSONL files.
+
+## More
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, rules for changes, redrawing the pictures
+- [SECURITY.md](SECURITY.md): what each mod can read, run, write and send, and how to report a problem
+- [CHANGELOG.md](CHANGELOG.md): what changed, per mod
 
 ## Licence
 
