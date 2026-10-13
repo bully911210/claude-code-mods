@@ -1,0 +1,15 @@
+name: Idea or new mod
+description: Suggest a feature for one of the mods, or a new mod.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should it do, and when would you use it?
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: What would it need to read, write, run or send?
+      description: Mods here disclose their access, so it helps to think about this up front.

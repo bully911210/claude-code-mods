@@ -1,0 +1,36 @@
+name: Bug report
+description: A mod misbehaves, doesn't load, or draws wrong.
+labels: [bug]
+body:
+  - type: dropdown
+    id: mod
+    attributes:
+      label: Which mod?
+      options: [token-ledger, next-steps, auto-docs]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Claude Code version and surface
+      description: For example "2.1.295, desktop app" or "2.1.295, terminal".
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Output of `claude plugin validate <mod>`
+      description: Remove anything private before pasting.
+      render: text
