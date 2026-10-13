@@ -51,6 +51,11 @@
   .chip { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 3px; background: var(--chip); color: var(--dim); font-size: 11px; }
   .key { color: var(--inactive); font-size: 11px; }
   .note { color: var(--dim); font-size: 12px; margin: 10px 0 30px; }
+  .install { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 0 0 30px; }
+  .install h2 { font-size: 15px; margin: 0 0 8px; }
+  .install-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .install pre { margin: 0; flex: 1; min-width: 0; overflow-x: auto; background: var(--composer); border-radius: 8px; padding: 10px 12px; font: 13px/1.5 "JetBrains Mono", Consolas, monospace; }
+  .copy { background: var(--accent); color: #1f1e1d; border: 0; border-radius: 6px; padding: 6px 14px; font: inherit; font-weight: 600; cursor: pointer; }
   footer { color: var(--dim); font-size: 12px; padding-bottom: 40px; }
   a { color: var(--suggestion); }
   @media (max-width: 860px) { .app { grid-template-columns: 1fr; } .band { white-space: normal; } }
@@ -83,6 +88,17 @@
     </aside>
   </div>
   <p class="note">Keyboard works too: focus the pane and press 1-5 to tick, <b>a</b> select all, <b>c</b> clear, <b>i</b> insert. The real mods ask Haiku for these; this page replays the recorded answers.</p>
+  <section class="install" aria-labelledby="install-h">
+    <h2 id="install-h">Install</h2>
+    <div class="install-row">
+      <pre id="install-cmd">/plugin marketplace add bully911210/claude-code-mods
+/plugin install token-ledger@claude-code-mods
+/plugin install next-steps@claude-code-mods
+/plugin install auto-docs@claude-code-mods</pre>
+      <button type="button" class="copy" id="copy-install">Copy</button>
+    </div>
+    <p class="note" style="margin:8px 0 0">Run these in a Claude Code session, then fully quit and reopen Claude.</p>
+  </section>
 </main>
 <footer>MIT licensed · <a href="https://github.com/bully911210/claude-code-mods">github.com/bully911210/claude-code-mods</a></footer>
 
@@ -280,6 +296,16 @@
   });
   for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => selectTab(b.dataset.tab));
   $("pane-close").addEventListener("click", closePane);
+  $("copy-install").addEventListener("click", async () => {
+    const btn = $("copy-install");
+    try {
+      await navigator.clipboard.writeText($("install-cmd").textContent);
+      btn.textContent = "Copied";
+    } catch {
+      btn.textContent = "Select and copy";
+    }
+    setTimeout(() => { btn.textContent = "Copy"; }, 1600);
+  });
 
   Promise.all([load("token-ledger"), load("next-steps")]).then(([tl, ns]) => {
     TL = tl; NS = ns;
