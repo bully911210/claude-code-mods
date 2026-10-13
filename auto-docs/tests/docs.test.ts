@@ -101,8 +101,10 @@ const world = (on: On, opts: { message: string; changed: string[]; reply: string
     if (args[0] === 'commit') head = 'fff9999000'
     return out('')
   })
-  // The engine hands paths over in the platform's own form: compare with forward slashes.
-  const key = (p: string): string => p.replace(/\\/g, '/')
+  // The engine hands paths over in the platform's own form, and off Windows it
+  // resolves the C:/repo root against the working directory: key the fake files
+  // by their path from C:/repo on.
+  const key = (p: string): string => p.replace(/\\/g, '/').replace(/^.*?(?=C:\/repo\/)/, '')
   on('fs.read', ($, e) => (key(e.path) in files ? { value: files[key(e.path)] } : { deny: 'ENOENT' }) as never)
   on('fs.write', ($, e) => {
     files[key(e.path)] = e.text
