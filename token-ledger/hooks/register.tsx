@@ -29,6 +29,7 @@ import { telemetryTree } from './telemetry'
 import { pickSignals } from './lib/memory'
 import type { Signal } from './lib/memory'
 import { foldAfterTurn, memoryBlock, memoryHandlers, MEMORY_PANE, noteUserPrompt, recordSignals, refreshMemoryView, runBriefCommand } from './memoryEngine'
+import type { MemoryPorts } from './memoryEngine'
 import { memoryPane } from './memoryView'
 import { paneTree } from './views'
 
@@ -60,6 +61,22 @@ const memoryAtom = atom(
   { plugin: 'token-ledger', key: 'memory' } as const,
   { projectName: '', brief: '', profile: '', signals: [] as Signal[], folds: 0, updatedAt: 0 },
 )
+
+/** The memory's way to the engine: each port spells its engine call out, because `$` is only followed inside this file. */
+function memoryPorts($: EngineInterface): MemoryPorts {
+  return {
+    storeGet: key => $.store.get(key),
+    storeSet: (key, value) => $.store.set(key, value),
+    root: () => $.session.root(),
+    now: () => $.clock.now(),
+    complete: request => $.model.complete(request),
+    show: view => update($, memoryAtom, () => ({ ...view, signals: [...view.signals] })),
+    openPane: async () => (await $.ui.open({ id: MEMORY_PANE, title: 'What I know about you and this project' })).isPlaced,
+    closePane: async () => {
+      await $.ui.close({ id: MEMORY_PANE })
+    },
+  }
+}
 const insightsAtom = atom({ plugin: 'token-ledger', key: 'insights' } as const, {
   status: 'idle' as 'idle' | 'loading' | 'ready' | 'empty' | 'error',
   items: [] as { title: string; question: string }[],
@@ -215,7 +232,7 @@ async function gatherInsightContext($: EngineInterface): Promise<InsightContext>
     'deny' in api
       ? []
       : api.flatMap(m => m.content.filter(b => b.type === 'thinking' && typeof b.thinking === 'string').map(b => String(b.thinking)))
-  const memory = await memoryBlock($).catch(() => ({ text: '', hasBrief: false }))
+  const memory = await memoryBlock(memoryPorts($)).catch(() => ({ text: '', hasBrief: false }))
   return {
     project: { name, branch, gitStatus, recentCommits, docs: ancestors.slice(-2).map(a => ({ path: `${a.dir}/${a.name}`, text: a.content })) },
     messages,
@@ -350,7 +367,7 @@ async function insertInsights($: EngineInterface): Promise<void> {
     return
   }
   // Which suggestions the user took and which they left is the best feedback there is.
-  await recordSignals($, pickSignals(state.items, state.picked, await $.clock.now())).catch(() => undefined)
+  await recordSignals(memoryPorts($), pickSignals(state.items, state.picked, await $.clock.now())).catch(() => undefined)
   await closeInsights($)
 }
 
@@ -358,7 +375,7 @@ async function insertInsights($: EngineInterface): Promise<void> {
 async function dismissInsights($: EngineInterface): Promise<void> {
   const state = await read($, insightsAtom)
   if (state.status === 'ready' && state.items.length > 0) {
-    await recordSignals($, pickSignals(state.items, [], await $.clock.now())).catch(() => undefined)
+    await recordSignals(memoryPorts($), pickSignals(state.items, [], await $.clock.now())).catch(() => undefined)
   }
   await closeInsights($)
 }
@@ -388,7 +405,7 @@ export const register: Register = (on, options) => {
     const step = (work: () => Promise<unknown>) => work().catch(() => undefined)
     await step(() => $.command.register({ name: 'ledger', description: 'Token ledger: limits, subagents, cache hits and cache rewrites' }))
     await step(() => $.command.register({ name: 'brief', description: 'See and correct what the mod knows about you and this project' }))
-    await step(() => refreshMemoryView($))
+    await step(() => refreshMemoryView(memoryPorts($)))
     await step(() => $.command.register({ name: 'ask', description: 'Ask Haiku for five questions worth asking this conversation next' }))
     // A request cut off by a reload or restart must not leave the "?" stuck on "…".
     await step(async () => {
@@ -476,7 +493,7 @@ export const register: Register = (on, options) => {
 
     await syncAgents($, cfg).catch(() => undefined)
     // Memory folds in the background so the turn is never held up by it.
-    if (e.reason === 'answer') void foldAfterTurn($, e.answer)
+    if (e.reason === 'answer') void foldAfterTurn(memoryPorts($), e.answer)
     const figures = await readEngineFigures($)
     const lastCost = await read($, lastCostAtom)
     const realUsd = Math.max(0, figures.costUsd - (lastCost < 0 ? figures.costUsd : lastCost))
@@ -576,9 +593,9 @@ export const register: Register = (on, options) => {
     return insightsPane($.ui.resolve(e), insights, width, insightHandlers($))
   })
 
-  on('command.run', { command: 'brief' }, async ($, e) => ({ text: await runBriefCommand($, e.args).catch(() => 'Could not read or update the memory.') }))
+  on('command.run', { command: 'brief' }, async ($, e) => ({ text: await runBriefCommand(memoryPorts($), e.args).catch(() => 'Could not read or update the memory.') }))
 
-  on('ui.render', { component: 'Pane', requestId: MEMORY_PANE }, async ($, e) => memoryPane($.ui.resolve(e), await read($, memoryAtom), memoryHandlers($)))
+  on('ui.render', { component: 'Pane', requestId: MEMORY_PANE }, async ($, e) => memoryPane($.ui.resolve(e), await read($, memoryAtom), memoryHandlers(memoryPorts($))))
 
   on('command.run', { command: 'ask' }, async $ => {
     void runInsights($)
