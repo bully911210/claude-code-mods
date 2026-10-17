@@ -6,6 +6,8 @@ export const QUESTION_COUNT = 5
 
 /** Budgets keep the request small and fast; the newest context matters most. */
 const MAX_MESSAGES = 40
+/** With a memory block the history lives there, so only the freshest turns are needed. */
+const MAX_MESSAGES_WITH_MEMORY = 6
 const MAX_MESSAGE_CHARS = 1_500
 const MAX_THINKING_CHARS = 4_000
 const MAX_PROJECT_DOC_CHARS = 6_000
@@ -23,17 +25,25 @@ export type InsightContext = {
   }
   readonly messages: readonly { readonly role: 'user' | 'assistant'; readonly text: string; readonly tools: readonly string[] }[]
   readonly thinking: readonly string[]
+  /** The rendered memory block (see memory.ts renderMemory); leads the prompt when present. */
+  readonly memory?: string
+  /** False when the memory holds no brief yet (only feedback): the chat then still carries the history. */
+  readonly memoryHasBrief?: boolean
 }
 
 export const SYSTEM = [
-  'You help a developer get more out of their current Claude Code conversation.',
-  `Write exactly ${QUESTION_COUNT} questions the developer could ask Claude next.`,
-  'Each question must uncover something the conversation has not adequately explored:',
-  'information or capabilities the system already has but has not surfaced; non-obvious technical opportunities;',
-  'critical assumptions nobody has verified; failure modes, edge cases and architectural weaknesses;',
-  'or a high-leverage experiment or investigation that would materially improve the outcome.',
-  'Tie every question to specifics in the context (files, tools, decisions, errors, names). No generic prompts.',
-  'Make the five meaningfully different from one another. Keep each question under 220 characters and actionable.',
+  'The user is a business owner and operator, not a developer. Do not assume the work is software, and do not use developer framing or jargon.',
+  'Work out from the context what the project actually is (for example marketing, ads, sales, lead generation, content, brand, operations, reporting, or software) and what outcome the user is chasing.',
+  `Then write exactly ${QUESTION_COUNT} questions the user could ask Claude next, as the sharpest domain expert for that exact project would: a senior marketer, strategist, operator or analyst, whichever fits.`,
+  'Each question must surface expert insight the conversation has not yet explored:',
+  'a lever or opportunity being missed; an assumption nobody has tested; the real risk, weakness or blind spot in the current approach;',
+  'something Claude or the connected tools could already do or find out but has not yet; or a high-leverage test, check or decision that would materially improve the result.',
+  'Tie every question to specifics in the context (the actual project, brand, numbers, files, tools, decisions, names). Never ask a generic question that could apply to any project.',
+  'The memory sections at the top of the context (About the user, The project so far, What the user has told us and how they react) are the authoritative picture of the user and the project; trust them over a thin or empty chat.',
+  'Signals in the memory: ignored, correction and frustration are things to AVOID repeating or contradicting, so never ask something the user has already decided, corrected or ignored.',
+  'Signals marked accepted show the style the user likes, so lean toward similar depth and angle, but do not repeat the same question.',
+  'Write for a business owner in plain language.',
+  'Make the five meaningfully different from one another. Keep each question under 220 characters, plain-spoken and actionable.',
   'Use only what the context shows. Do not claim to have seen anything it does not contain.',
   'Reply with JSON only: {"questions":[{"title":"2-5 word label","question":"the full question"}]}',
 ].join(' ')
@@ -53,11 +63,13 @@ export const buildPrompt = (c: InsightContext): string => {
   const thinkingPart = thinking.length
     ? [`Claude's visible reasoning notes (most recent):\n${cut(thinking.slice(-3).join('\n---\n'), MAX_THINKING_CHARS)}`]
     : ["Claude's reasoning is not visible for this conversation; do not guess at it."]
-  const convo = c.messages.slice(-MAX_MESSAGES).map(m => {
+  const memory = (c.memory ?? '').trim()
+  const recent = memory === '' || c.memoryHasBrief === false ? MAX_MESSAGES : MAX_MESSAGES_WITH_MEMORY
+  const convo = c.messages.slice(-recent).map(m => {
     const tools = m.tools.length ? ` [tools: ${[...new Set(m.tools)].join(', ')}]` : ''
     return `${m.role === 'user' ? 'USER' : 'CLAUDE'}${tools}: ${cut(m.text.trim(), MAX_MESSAGE_CHARS)}`
   })
-  const head = ['## Project', ...project, '', '## Reasoning', ...thinkingPart, '', '## Conversation (oldest first)'].join('\n')
+  const head = [...(memory === '' ? [] : [memory, '']), '## Project', ...project, '', '## Reasoning', ...thinkingPart, '', '## Conversation (oldest first)'].join('\n')
   // Drop the oldest messages until the whole prompt fits.
   let body = convo
   while (body.length > 1 && head.length + body.join('\n').length > MAX_TOTAL_CHARS) body = body.slice(1)

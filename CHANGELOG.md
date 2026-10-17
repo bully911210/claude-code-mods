@@ -2,6 +2,16 @@
 
 Each mod is versioned on its own (the `version` in its `.claude-plugin/plugin.json`). Dates are UTC.
 
+## 2026-10-17
+
+- **token-ledger 0.6.0**: `?` now learns from your project and from you.
+  - After each turn you type, Haiku folds the exchange into a short per-project brief and a profile of you that carries across projects.
+  - Your corrections and frustration, and which suggestions you inserted or skipped, are logged as feedback.
+  - `?` reads that memory plus only the latest messages. Until a brief exists it still gets the full chat.
+  - New `/brief` command shows what the mod knows and lets you fix it: `/brief brief <text>`, `/brief profile <text>`, `/brief forget`, `/brief reset`.
+  - Names, ID numbers, phones, emails and card numbers are redacted before anything is stored or sent to Haiku. Only prompts a person typed are learned from, never notifications or schedules.
+  - The `?` prompt no longer assumes you are a developer.
+
 ## 2026-10-13
 
 - **auto-docs:** tests now pass on Linux and macOS as well as Windows.

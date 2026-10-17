@@ -3,7 +3,7 @@
   "owner": { "name": "bully911210", "url": "https://github.com/bully911210" },
   "metadata": { "description": "Function-hook mods for Claude Code: a limits telemetry row, multi-select question and next-step panes, and README updates after every commit." },
   "plugins": [
-    { "name": "token-ledger", "source": "./token-ledger", "description": "5-hour, weekly, context and cache-hit figures in one row above the prompt, a ? button for Haiku questions, and a /ledger pane." },
+    { "name": "token-ledger", "source": "./token-ledger", "description": "5-hour, weekly, context and cache-hit figures in one row above the prompt, a ? button for Haiku questions that learns your project and feedback, a /brief pane to see and correct it, and a /ledger pane." },
     { "name": "next-steps", "source": "./next-steps", "description": "1-3 suggested next prompts after each real turn, tick any number and insert them together." },
     { "name": "auto-docs", "source": "./auto-docs", "description": "After each commit, updates README.md (or the docs you list) in a follow-up docs commit." }
   ]

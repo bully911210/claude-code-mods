@@ -26,6 +26,10 @@ import { askButton, insightsPane } from './insightsView'
 import { buildPrompt, fillPlan, INSIGHT_MODEL, parseInsights, SYSTEM as INSIGHT_SYSTEM } from './lib/insights'
 import type { InsightContext } from './lib/insights'
 import { telemetryTree } from './telemetry'
+import { pickSignals } from './lib/memory'
+import type { Signal } from './lib/memory'
+import { foldAfterTurn, memoryBlock, memoryHandlers, MEMORY_PANE, noteUserPrompt, recordSignals, refreshMemoryView, runBriefCommand } from './memoryEngine'
+import { memoryPane } from './memoryView'
 import { paneTree } from './views'
 
 const PANE = 'ledger'
@@ -52,6 +56,10 @@ const agentsAtom = atom({ plugin: 'token-ledger', key: 'agents' } as const, [] a
 const mainPendingAtom = atom({ plugin: 'token-ledger', key: 'mainPendingUsd' } as const, 0)
 const samplesAtom = atom({ plugin: 'token-ledger', key: 'samples' } as const, [] as LedgerSample[])
 const effortAtom = atom({ plugin: 'token-ledger', key: 'effort' } as const, '')
+const memoryAtom = atom(
+  { plugin: 'token-ledger', key: 'memory' } as const,
+  { projectName: '', brief: '', profile: '', signals: [] as Signal[], folds: 0, updatedAt: 0 },
+)
 const insightsAtom = atom({ plugin: 'token-ledger', key: 'insights' } as const, {
   status: 'idle' as 'idle' | 'loading' | 'ready' | 'empty' | 'error',
   items: [] as { title: string; question: string }[],
@@ -207,10 +215,13 @@ async function gatherInsightContext($: EngineInterface): Promise<InsightContext>
     'deny' in api
       ? []
       : api.flatMap(m => m.content.filter(b => b.type === 'thinking' && typeof b.thinking === 'string').map(b => String(b.thinking)))
+  const memory = await memoryBlock($).catch(() => ({ text: '', hasBrief: false }))
   return {
     project: { name, branch, gitStatus, recentCommits, docs: ancestors.slice(-2).map(a => ({ path: `${a.dir}/${a.name}`, text: a.content })) },
     messages,
     thinking,
+    memory: memory.text,
+    memoryHasBrief: memory.hasBrief,
   }
 }
 
@@ -314,7 +325,7 @@ const insightHandlers = ($: EngineInterface) => ({
     void runInsights($)
   },
   close: () => {
-    void closeInsights($)
+    void dismissInsights($)
   },
 })
 
@@ -337,6 +348,17 @@ async function insertInsights($: EngineInterface): Promise<void> {
     const why = filled.refusal === 'dialog' ? 'a dialog is holding the prompt; close it and pick again' : 'the prompt box could not take the text'
     await update($, insightsAtom, s => ({ ...s, insertError: `Not inserted: ${why}.` }))
     return
+  }
+  // Which suggestions the user took and which they left is the best feedback there is.
+  await recordSignals($, pickSignals(state.items, state.picked, await $.clock.now())).catch(() => undefined)
+  await closeInsights($)
+}
+
+/** The Close button: questions left unused count as skipped. */
+async function dismissInsights($: EngineInterface): Promise<void> {
+  const state = await read($, insightsAtom)
+  if (state.status === 'ready' && state.items.length > 0) {
+    await recordSignals($, pickSignals(state.items, [], await $.clock.now())).catch(() => undefined)
   }
   await closeInsights($)
 }
@@ -365,6 +387,8 @@ export const register: Register = (on, options) => {
     // Each step stands alone: one failing (a command name taken, a store hiccup) never stops the rest or the session.
     const step = (work: () => Promise<unknown>) => work().catch(() => undefined)
     await step(() => $.command.register({ name: 'ledger', description: 'Token ledger: limits, subagents, cache hits and cache rewrites' }))
+    await step(() => $.command.register({ name: 'brief', description: 'See and correct what the mod knows about you and this project' }))
+    await step(() => refreshMemoryView($))
     await step(() => $.command.register({ name: 'ask', description: 'Ask Haiku for five questions worth asking this conversation next' }))
     // A request cut off by a reload or restart must not leave the "?" stuck on "…".
     await step(async () => {
@@ -451,6 +475,8 @@ export const register: Register = (on, options) => {
     }
 
     await syncAgents($, cfg).catch(() => undefined)
+    // Memory folds in the background so the turn is never held up by it.
+    if (e.reason === 'answer') void foldAfterTurn($, e.answer)
     const figures = await readEngineFigures($)
     const lastCost = await read($, lastCostAtom)
     const realUsd = Math.max(0, figures.costUsd - (lastCost < 0 ? figures.costUsd : lastCost))
@@ -486,6 +512,12 @@ export const register: Register = (on, options) => {
     const five = await read($, fiveHourAtom)
     const summary = five < 0 ? 'No limit reading yet.' : `5-hour limit ${pct(five)}% used.`
     return { text: opened.isPlaced ? summary : `${summary} Widen the terminal to see the ledger pane.` }
+  })
+
+  // What the person typed is what memory learns from: not notifications, schedules or peers.
+  on('prompt.submit', async ($, e, next) => {
+    noteUserPrompt({ text: e.text, origin: e.origin, isMeta: e.isMeta, command: e.command })
+    return next(e)
   })
 
   // The telemetry row above the prompt and the "?" launcher at its right.
@@ -543,6 +575,10 @@ export const register: Register = (on, options) => {
     const width = e.props.bodyColumns ?? e.viewport?.columns ?? 80
     return insightsPane($.ui.resolve(e), insights, width, insightHandlers($))
   })
+
+  on('command.run', { command: 'brief' }, async ($, e) => ({ text: await runBriefCommand($, e.args).catch(() => 'Could not read or update the memory.') }))
+
+  on('ui.render', { component: 'Pane', requestId: MEMORY_PANE }, async ($, e) => memoryPane($.ui.resolve(e), await read($, memoryAtom), memoryHandlers($)))
 
   on('command.run', { command: 'ask' }, async $ => {
     void runInsights($)

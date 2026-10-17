@@ -1,15 +1,15 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { buildPrompt, fillPlan, INSIGHT_MODEL, parseInsights } from '../hooks/lib/insights'
+import { buildPrompt, fillPlan, INSIGHT_MODEL, parseInsights, SYSTEM } from '../hooks/lib/insights'
 
 const context = {
   project: {
-    name: 'my-app',
+    name: 'LEADBRIDGE DASHBOARD',
     branch: 'main',
-    gitStatus: ' M src/dedupe.ts',
+    gitStatus: ' M src/vicidial.ts',
     recentCommits: 'a1b2c3d feat: hourly top 10',
-    docs: [{ path: 'C:/work/CLAUDE.md', text: 'Never write to the production database.' }],
+    docs: [{ path: 'C:/work/CLAUDE.md', text: 'Never write to the prod ViciDial DB.' }],
   },
   messages: [
     { role: 'user' as const, text: 'Why do leads duplicate?', tools: [] },
@@ -20,8 +20,8 @@ const context = {
 
 const FIVE = JSON.stringify({
   questions: [
-    { title: 'Normalise first', question: 'What breaks if we normalise phone numbers before the dedupe step in src/dedupe.ts?' },
-    { title: 'Prod write risk', question: 'Which code paths could still write to the production database despite the CLAUDE.md rule?' },
+    { title: 'Normalise first', question: 'What breaks if we normalise phone numbers before the dedupe step in src/vicidial.ts?' },
+    { title: 'Prod write risk', question: 'Which code paths could still write to the prod ViciDial DB despite the CLAUDE.md rule?' },
     { title: 'Missing tests', question: 'Which duplicate-lead cases have no test today, and can you write them?' },
     { title: 'Hourly job timing', question: 'Could the hourly top 10 run while a dedupe is half done?' },
     { title: 'Unused data', question: 'Is there lead-source data in the payload we are dropping that would explain the duplicates?' },
@@ -31,10 +31,10 @@ const FIVE = JSON.stringify({
 describe('the context Haiku reads', () => {
   test('project, reasoning and chat all go in, without inventing reasoning', () => {
     const p = buildPrompt(context)
-    expect(p).toContain('my-app')
+    expect(p).toContain('LEADBRIDGE DASHBOARD')
     expect(p).toContain('Git branch: main')
-    expect(p).toContain('M src/dedupe.ts')
-    expect(p).toContain('Never write to the production database.')
+    expect(p).toContain('M src/vicidial.ts')
+    expect(p).toContain('Never write to the prod ViciDial DB.')
     expect(p).toContain("reasoning is not visible")
     expect(p).toContain('CLAUDE [tools: Read, Grep]: The dedupe runs before the phone is normalised.')
   })
@@ -52,11 +52,59 @@ describe('the context Haiku reads', () => {
   })
 })
 
+describe('memory in the prompt', () => {
+  const memory = ['## About the user', 'Runs a marketing agency.', '', '## The project so far', 'Roofing leads.'].join('\n')
+  const chat = (n: number) => Array.from({ length: n }, (_, i) => ({ role: 'user' as const, text: `turn ${i} end`, tools: [] }))
+
+  test('the memory block is the first section, before the project', () => {
+    const p = buildPrompt({ ...context, memory })
+    expect(p.startsWith(memory)).toBe(true)
+    expect(p.indexOf('## About the user')).toBeLessThan(p.indexOf('## Project'))
+    expect(p).toContain('LEADBRIDGE DASHBOARD')
+  })
+
+  test('with memory only the last 6 messages go in, because memory carries the history', () => {
+    const p = buildPrompt({ ...context, memory, messages: chat(30) })
+    expect(p).toContain('turn 29 end')
+    expect(p).toContain('turn 24 end')
+    expect(p).not.toContain('turn 23 end')
+  })
+
+  test('without memory, or with blank memory, all 40 recent messages still go in', () => {
+    for (const m of [undefined, '', '   ']) {
+      const p = buildPrompt({ ...context, memory: m, messages: chat(50) })
+      expect(p).toContain('turn 10 end')
+      expect(p).not.toContain('turn 9 end')
+      expect(p.startsWith('## Project')).toBe(true)
+    }
+  })
+
+  test('memory does not change the prompt when absent', () => {
+    expect(buildPrompt({ ...context, memory: undefined })).toBe(buildPrompt(context))
+  })
+
+  test('the instructions keep the old rules and add the memory rules', () => {
+    expect(SYSTEM).toContain('not a developer')
+    expect(SYSTEM).toContain('authoritative picture')
+    expect(SYSTEM).toContain('never ask something the user has already decided')
+    expect(SYSTEM).toContain('ignored')
+    expect(SYSTEM).toContain('correction')
+    expect(SYSTEM).toContain('frustration')
+    expect(SYSTEM).toContain('accepted')
+    expect(SYSTEM).toContain('plain language')
+    expect(SYSTEM).toContain('sharpest domain expert')
+    expect(SYSTEM).toContain('Never ask a generic question')
+    expect(SYSTEM).toContain('under 220 characters')
+    expect(SYSTEM).toContain('exactly 5 questions')
+    expect(SYSTEM.endsWith('{"questions":[{"title":"2-5 word label","question":"the full question"}]}')).toBe(true)
+  })
+})
+
 describe('reading the reply', () => {
   test('five distinct questions, exactly as written', () => {
     const items = parseInsights(`Here you go:\n${FIVE}`)
     expect(items.length).toBe(5)
-    expect(items[0]?.question).toBe('What breaks if we normalise phone numbers before the dedupe step in src/dedupe.ts?')
+    expect(items[0]?.question).toBe('What breaks if we normalise phone numbers before the dedupe step in src/vicidial.ts?')
   })
 
   test('duplicates, blanks and junk are dropped; malformed replies give nothing', () => {
@@ -95,7 +143,7 @@ const world = (on: On, o: Opts = {}) => {
   mock.store(on)
   const seen = { models: [] as string[], prompts: [] as string[], fills: [] as { text: string; mode?: string }[], submits: 0, opened: 0, closed: 0 }
   on('session.usage', () => ({ value: { startedAt: 0, context: { tokens: 1, window: 200_000, percent: 4 }, rateLimits: [{ kind: 'five_hour', percentUsed: 25 }], cost: { usd: 0 } } }) as never)
-  on('session.root', () => ({ value: 'C:/work/my-app' }))
+  on('session.root', () => ({ value: 'C:/work/LEADBRIDGE DASHBOARD' }))
   on('session.id', () => ({ value: 's1' }))
   on('session.model', () => ({ value: 'claude-opus-5-5' }))
   on('session.messages', ($, e) =>
@@ -103,7 +151,7 @@ const world = (on: On, o: Opts = {}) => {
       ? { value: [{ role: 'assistant', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'ok' }] }] }
       : { value: context.messages.map(m => ({ role: m.role, text: m.text, toolUses: m.tools.map(t => ({ tool: t, input: {} })) })) }) as never,
   )
-  on('fs.ancestors', () => ({ value: [{ dir: 'C:/work', name: 'CLAUDE.md', content: 'Never write to the production database.', parts: [] }] }) as never)
+  on('fs.ancestors', () => ({ value: [{ dir: 'C:/work', name: 'CLAUDE.md', content: 'Never write to the prod ViciDial DB.', parts: [] }] }) as never)
   on('process.run', () => ({ value: { exitCode: 0, stdout: 'main', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }) as never)
   on('model.complete', ($, e) => {
     seen.models.push(e.model)
@@ -148,7 +196,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await Promise.all([band.press({ key: 'ask' }), band.press({ key: 'ask' })])
     await clock.settle()
     expect(seen.models).toEqual([INSIGHT_MODEL])
-    expect(seen.prompts[0]).toContain('Never write to the production database.')
+    expect(seen.prompts[0]).toContain('Never write to the prod ViciDial DB.')
     // The questions get a pane of their own, so the bar above the prompt never scrolls with them.
     expect(seen.opened).toBe(1)
     expect(await band.find({ key: 'q-0' })).toBeUndefined()
@@ -178,7 +226,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(seen.fills.length).toBe(1)
     expect(seen.fills[0]?.mode).toBe('replace')
     expect(seen.fills[0]?.text).toBe(
-      'Which code paths could still write to the production database despite the CLAUDE.md rule?\n\nCould the hourly top 10 run while a dedupe is half done?',
+      'Which code paths could still write to the prod ViciDial DB despite the CLAUDE.md rule?\n\nCould the hourly top 10 run while a dedupe is half done?',
     )
     expect(seen.submits).toBe(0)
     await pane.unmount()
