@@ -79,7 +79,7 @@ Click `?` at the end of the row, or run `/ask`. Haiku 5.5 reads the project (fol
 | `/brief forget` | Clears this project's feedback log. |
 | `/brief reset` | Clears this project's brief and feedback. Your profile is kept. |
 
-Privacy: ID numbers, phone numbers, email addresses and card numbers are replaced with stable tokens before anything is stored or sent to Haiku. Only prompts a person typed are learned from, never notifications, schedules or peer messages. Everything is stored locally in the plugin's own store. A manual `/brief brief` edit can be rewritten by a later turn's fold, so re-run it if a fact must stay.
+Privacy: South African ID numbers and phone numbers, email addresses, card numbers, bank accounts and passport numbers are replaced with stable tokens before anything is stored or sent to Haiku. People's names and phone or ID formats from other countries are **not** detected, so don't put those in prompts you don't want a model to see. Only prompts a person typed are learned from, never notifications, schedules or peer messages. Everything is stored locally in the plugin's own store. A manual `/brief brief` edit can be rewritten by a later turn's fold, so re-run it if a fact must stay.
 
 ### `/ledger`
 

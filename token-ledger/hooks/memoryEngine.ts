@@ -18,6 +18,7 @@ import {
   classifyUserMessage,
   EMPTY_PROJECT,
   FOLD_SYSTEM,
+  mergeExchanges,
   parseBriefCommand,
   parseFold,
   projectKey,
@@ -187,7 +188,10 @@ export async function foldAfterTurn(io: MemoryPorts, answer: string): Promise<vo
     const turn: Exchange = { user, assistant: answer }
     if (!shouldFold({ ...turn, signals: [] })) return
     if (isFolding) {
-      if (waiting.length < WAITING_MAX) waiting.push(turn)
+      // Past the limit, a turn joins the newest one waiting instead of being dropped.
+      const last = waiting.at(-1)
+      if (waiting.length < WAITING_MAX || last === undefined) waiting.push(turn)
+      else waiting[waiting.length - 1] = mergeExchanges(last, turn)
       return
     }
     isFolding = true

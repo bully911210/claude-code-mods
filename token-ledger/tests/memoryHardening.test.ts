@@ -9,7 +9,9 @@ import {
   EMPTY_PROFILE,
   EMPTY_PROJECT,
   parseBriefCommand,
+  mergeExchanges,
   parseFold,
+  projectKey,
   renderMemory,
   SIGNAL_QUOTA,
 } from '../hooks/lib/memory'
@@ -126,5 +128,40 @@ describe('the ? prompt only gives up chat history when a real brief stands in fo
     const p = buildPrompt({ ...base, memory: '## About the user\nX', memoryHasBrief: true })
     expect(p).not.toContain('message 0')
     expect(p).toContain('message 19')
+  })
+})
+
+describe('project keys follow the case rules of the path style', () => {
+  test('on a POSIX path, two folders that differ only by case are two projects', () => {
+    expect(projectKey('/work/Acme')).not.toBe(projectKey('/work/acme'))
+    expect(projectKey('/work/Acme')).toMatch(/^Acme-[0-9a-f]{8}$/)
+  })
+
+  test('on a Windows path, case and slash style still do not matter', () => {
+    expect(projectKey('C:\\Users\\X\\Proj')).toBe(projectKey('c:/users/x/proj/'))
+    expect(projectKey('\\\\server\\Share\\Proj')).toBe(projectKey('//SERVER/share/proj'))
+  })
+})
+
+describe('a busy session folds every exchange, merging rather than dropping', () => {
+  test('two exchanges become one that holds both, oldest first', () => {
+    const merged = mergeExchanges({ user: 'first ask', assistant: 'first answer' }, { user: 'second ask', assistant: 'second answer' })
+    expect(merged.user).toBe('first ask\n\nsecond ask')
+    expect(merged.assistant).toBe('first answer\n\nsecond answer')
+  })
+
+  test('over the budget it keeps the newest words, not the oldest', () => {
+    const merged = mergeExchanges({ user: 'a'.repeat(3_000), assistant: 'x'.repeat(5_000) }, { user: 'NEWEST ASK', assistant: 'NEWEST ANSWER' })
+    expect(merged.user.endsWith('NEWEST ASK')).toBe(true)
+    expect(merged.assistant.endsWith('NEWEST ANSWER')).toBe(true)
+    expect(merged.user.length).toBeLessThanOrEqual(2_000)
+    expect(merged.assistant.length).toBeLessThanOrEqual(3_000)
+  })
+
+  test('inputs are left alone', () => {
+    const a = Object.freeze({ user: 'a', assistant: 'b' })
+    const b = Object.freeze({ user: 'c', assistant: 'd' })
+    expect(() => mergeExchanges(a, b)).not.toThrow()
+    expect(a.user).toBe('a')
   })
 })

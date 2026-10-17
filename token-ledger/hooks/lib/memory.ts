@@ -96,9 +96,14 @@ const fnv1a = (input: string): string => {
   return hash.toString(16).padStart(HASH_HEX_LENGTH, '0')
 }
 
-/** One stable key per folder, however the path is spelled (slashes, case, trailing slash). */
+/** Windows paths ignore case and mix slash styles; POSIX paths are case-sensitive, so /work/Acme and /work/acme differ. */
+const isWindowsPath = (raw: string): boolean => raw.includes('\\') || /^[a-z]:[\\/]/i.test(raw) || raw.startsWith('//')
+
+/** One stable key per folder, however a Windows path is spelled; a POSIX path keeps its case. */
 export function projectKey(root: string): string {
-  const path = typeof root === 'string' ? root.trim().replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase() : ''
+  const raw = typeof root === 'string' ? root.trim() : ''
+  const slashed = raw.replace(/\\/g, '/').replace(/\/+$/, '')
+  const path = isWindowsPath(raw) ? slashed.toLowerCase() : slashed
   if (path === '') return UNKNOWN_KEY
   const folder = (path.split('/').pop() ?? '')
     .replace(/[^\p{L}\p{N}._-]+/gu, '-')
@@ -183,6 +188,18 @@ export function pickSignals(
     const text = typeof item.question === 'string' ? item.question.trim() : ''
     return text === '' ? [] : [{ kind: picked.has(i) ? 'accepted' : 'ignored', text, at }]
   })
+}
+
+/** Two exchanges as one, oldest first, keeping the newest words if it would not fit the fold's budget. */
+export function mergeExchanges(
+  a: { readonly user: string; readonly assistant: string },
+  b: { readonly user: string; readonly assistant: string },
+): { readonly user: string; readonly assistant: string } {
+  const tail = (text: string, max: number): string => (text.length > max ? text.slice(-max) : text)
+  return {
+    user: tail(`${a.user}\n\n${b.user}`, FOLD_USER_MAX),
+    assistant: tail(`${a.assistant}\n\n${b.assistant}`, FOLD_ASSISTANT_MAX),
+  }
 }
 
 export type FoldTurn = { readonly user: string; readonly assistant: string; readonly signals: readonly Signal[] }

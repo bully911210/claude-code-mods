@@ -301,3 +301,17 @@ test('personal details in what was said are redacted before the fold call', asyn
   expect(seen.foldPrompts[0]).not.toContain('jane@example.com')
   expect(seen.foldPrompts[0]).not.toContain('8001015009087')
 })
+
+test('when a fold is slow and many turns pile up, none of them is lost', async ($, on) => {
+  const { clock, seen, hold, release } = world(on)
+  await $.session.start({ cwd: 'C:/Clients/Acme Campaign', surface: 'terminal', isInteractive: true })
+  hold()
+  for (let i = 1; i <= 6; i += 1) {
+    await say($ as never, `Question number ${i} about the Acme ads`)
+    await endTurn($ as never)
+  }
+  release()
+  await clock.settle()
+  const all = seen.foldPrompts.join('\n')
+  for (let i = 1; i <= 6; i += 1) expect(all).toContain(`Question number ${i} about the Acme ads`)
+})

@@ -9,7 +9,7 @@ Each mod is versioned on its own (the `version` in its `.claude-plugin/plugin.js
   - Your corrections and frustration, and which suggestions you inserted or skipped, are logged as feedback.
   - `?` reads that memory plus only the latest messages. Until a brief exists it still gets the full chat.
   - New `/brief` command shows what the mod knows and lets you fix it: `/brief brief <text>`, `/brief profile <text>`, `/brief forget`, `/brief reset`.
-  - Names, ID numbers, phones, emails and card numbers are redacted before anything is stored or sent to Haiku. Only prompts a person typed are learned from, never notifications or schedules.
+  - South African ID numbers and phone numbers, emails, card numbers, bank accounts and passport numbers are redacted before anything is stored or sent to Haiku. Names and non-South-African phone or ID formats are not detected. Only prompts a person typed are learned from, never notifications or schedules.
   - The `?` prompt no longer assumes you are a developer.
 
 ## 2026-10-13
