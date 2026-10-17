@@ -1,7 +1,7 @@
 {
   "name": "token-ledger",
-  "version": "0.5.0",
-  "description": "Your 5-hour, weekly, context and cache-hit figures as one line above the prompt, a ? button that asks Haiku 5.5 for questions to ask next, and a /ledger pane with subagent shares. Percentages only, no money.",
+  "version": "0.6.0",
+  "description": "Your 5-hour, weekly, context and cache-hit figures as one line above the prompt, a ? button that asks Haiku 5.5 for questions to ask next, drawn from a running brief of the project and what you've told it (see /brief), and a /ledger pane with subagent shares. Percentages only, no money.",
   "author": {
     "name": "claude-code-mods contributors",
     "url": "https://github.com/bully911210/claude-code-mods"

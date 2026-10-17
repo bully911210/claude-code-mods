@@ -84,8 +84,21 @@ declare module 'claude-code' {
       insights: {
         status: 'idle' | 'loading' | 'ready' | 'empty' | 'error'
         items: { title: string; question: string }[]
+        /** Indexes ticked for insertion, in the order they were ticked. */
+        picked: number[]
+        /** True when the pane could not be placed and the questions fall back into the band. */
+        inBand: boolean
         error: string
         insertError: string
+      }
+      /** What the mod knows about this project and the user, for the /brief pane. */
+      memory: {
+        projectName: string
+        brief: string
+        profile: string
+        signals: { kind: 'correction' | 'frustration' | 'accepted' | 'ignored'; text: string; at: number }[]
+        folds: number
+        updatedAt: number
       }
       session: LedgerSession
       recent: LedgerTurn[]

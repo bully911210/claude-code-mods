@@ -25,7 +25,7 @@ Every picture below was rendered from the element trees these mods really return
 
 | Mod | What you get | Commands |
 | --- | --- | --- |
-| [token-ledger](#token-ledger) | A telemetry row above the prompt (5-hour %, burn rate, reset, time left, weekly %, context %, cache hit %, model, effort). A `?` button for five Haiku questions. A `/ledger` pane. | `/ask`, `/ledger` |
+| [token-ledger](#token-ledger) | A telemetry row above the prompt (5-hour %, burn rate, reset, time left, weekly %, context %, cache hit %, model, effort). A `?` button for five Haiku questions. A `/ledger` pane. A `/brief` pane for what it has learned about you and your project. | `/ask`, `/ledger`, `/brief` |
 | [next-steps](#next-steps) | 1-3 suggested next prompts after each real turn, in a pane of their own. | `/next`, `/next off`, `/next on` |
 | [auto-docs](#auto-docs) | After each commit, a follow-up `docs: sync with <sha>` commit that updates README.md, or the docs you list. | `/docs`, `/docs <commit>` |
 
@@ -58,6 +58,28 @@ Every figure comes from the engine's own readings. A metric with no reading is l
 Click `?` at the end of the row, or run `/ask`. Haiku 5.5 reads the project (folder, git branch, status and recent commits, CLAUDE.md), Claude's visible reasoning, and the chat. It writes five specific questions you haven't explored yet, which open in their own pane, so the row above the prompt never moves.
 
 <img src="docs/img/questions-pane.svg" alt="Questions worth asking pane with two questions ticked and the Insert 2 questions button" width="560">
+
+### `/brief`: what `?` has learned
+
+`?` does not start cold. After each prompt you type, a small Haiku call folds the exchange into three things the mod keeps on your machine:
+
+- **A project brief:** what the project is, the goal, what has been decided and what is still open. One per project folder.
+- **A profile of you:** who you are, your business, how you like to be spoken to. Shared across projects.
+- **Feedback:** things you corrected, moments you were frustrated, and which suggestions you inserted or skipped.
+
+`?` then reads that memory plus the latest messages, so its questions fit your project and don't repeat what you have already decided or skipped. Until a brief exists, `?` still gets the full recent chat.
+
+`/brief` shows what the mod believes so you can correct it:
+
+| Command | What it does |
+| --- | --- |
+| `/brief` | Opens the pane. |
+| `/brief brief <text>` | Replaces this project's brief. |
+| `/brief profile <text>` | Replaces your profile. |
+| `/brief forget` | Clears this project's feedback log. |
+| `/brief reset` | Clears this project's brief and feedback. Your profile is kept. |
+
+Privacy: South African ID numbers and phone numbers, email addresses, card numbers, bank accounts and passport numbers are replaced with stable tokens before anything is stored or sent to Haiku. People's names and phone or ID formats from other countries are **not** detected, so don't put those in prompts you don't want a model to see. Only prompts a person typed are learned from, never notifications, schedules or peer messages. Everything is stored locally in the plugin's own store. A manual `/brief brief` edit can be rewritten by a later turn's fold, so re-run it if a fact must stay.
 
 ### `/ledger`
 
